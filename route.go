@@ -488,6 +488,42 @@ func (r *Route) Subrouter() *Router {
 	return router
 }
 
+// AddSubrouter adds an existing router as a subrouter to a route. See Route.Subrouter.
+//
+// It will attach an error to the route if the router given has a named route
+// identical to one existing on the route.
+//
+// Example:
+//
+//     // in subpackage
+//     S := mux.NewRouter()
+//     S.HandleFunc("/products/", ProductsHandler)
+//     S.HandleFunc("/products/{key}", ProductHandler)
+//     S.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+//
+//     // in main package
+//     r := mux.NewRouter()
+//     r.Host("www.example.com").AddSubrouter(S)
+func (r *Route) AddSubrouter(subr *Router) *Route {
+	// copy named routes from subrouter to parent route
+	for name, route := range subr.namedRoutes {
+		_, namedRouteExists := r.namedRoutes[name]
+		if namedRouteExists {
+			r.err = fmt.Errorf("mux: router already has named route %q", name)
+			break
+		}
+		if r.err == nil {
+			r.namedRoutes[name] = route
+		}
+	}
+
+	// copy of the parent route's configuration to subrouter
+	subr.routeConf = copyRouteConf(r.routeConf)
+	subr.namedRoutes = r.namedRoutes
+	r.addMatcher(subr)
+	return r
+}
+
 // ----------------------------------------------------------------------------
 // URL building
 // ----------------------------------------------------------------------------

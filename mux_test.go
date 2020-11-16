@@ -1454,6 +1454,49 @@ func TestNamedRoutes(t *testing.T) {
 	}
 }
 
+func TestRoute_AddSubrouter(t *testing.T) {
+	r1 := NewRouter()
+	r1.NewRoute().Name("a")
+	r1.NewRoute().Name("b")
+	r1.NewRoute().Name("c")
+
+	r2 := NewRouter()
+	r2.NewRoute().Name("d")
+	r2.NewRoute().Name("e")
+	r2.NewRoute().Name("f")
+
+	r3 := NewRouter()
+	r3.NewRoute().Name("g")
+	r3.NewRoute().Name("h")
+	r3.NewRoute().Name("i")
+	r3.Name("j")
+
+	r1.NewRoute().AddSubrouter(r2)
+	r1.NewRoute().AddSubrouter(r3)
+
+	if r1.namedRoutes == nil || len(r1.namedRoutes) != 10 {
+		t.Errorf("Expected 10 named routes, got %v", r1.namedRoutes)
+	} else if r1.Get("j") == nil {
+		t.Errorf("Subroute name not registered")
+	}
+}
+
+func TestRoute_AddSubrouter_duplicateNames(t *testing.T) {
+	r1 := NewRouter()
+	r1.NewRoute().Name("a")
+
+	r2 := NewRouter()
+	// duplicate named route
+	r2.NewRoute().Name("a")
+
+	rt := r1.NewRoute().AddSubrouter(r2)
+
+	err := rt.GetError()
+	if err == nil {
+		t.Errorf("Expected an error")
+	}
+}
+
 func TestNameMultipleCalls(t *testing.T) {
 	r1 := NewRouter()
 	rt := r1.NewRoute().Name("foo").Name("bar")
